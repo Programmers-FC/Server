@@ -13,7 +13,6 @@ import sys
 from pyspark.sql.functions import explode, col
 from pyspark.sql.types import IntegerType,DateType
 
-
 # 날짜 파라미터 받기
 if len(sys.argv) != 2:
     print("Usage: spark-submit <script.py> <processing_date>")
