@@ -14,6 +14,7 @@ from pyspark.sql.functions import explode, col
 from pyspark.sql.types import IntegerType,DateType
 
 # 날짜 파라미터 받기
+
 if len(sys.argv) != 2:
     print("Usage: spark-submit <script.py> <processing_date>")
     sys.exit(1)
@@ -36,10 +37,10 @@ spark = SparkSession.builder.master("local[1]").appName('sparkml_result').config
 data_path = f"s3a://de5-finalproj-team2/raw_data/csv/review_data/{processing_date}/review_data.csv"
 print(f"Reading csv file from: {data_path }")
 
-data = spark.read.csv(f"{data_path}", header=True, sep=",", multiLine=True, quote='"', escape="\\", inferSchema=True)
 
+data = spark.read.csv(f"{data_path}",header=True, sep=",", multiLine=True, quote='"', escape="\\", inferSchema=True)
 
-#모델 불러오기 전까지 리뷰 데이터 전처리(평점 제거, 불용어 제거 및 형태소 분석, 토큰화)
+#모델 불러오기 전까지 리뷰 데이터 전처리(순서대로 결측값 제거, 평점 제거, 불용어 제거 및 형태소 분석, 토큰화)
 
 def remove_rating(text):
     return re.sub(r"평점\s?\d+\s?", "", text).strip()
@@ -84,8 +85,18 @@ print(f"s3에서 모델 로드 완료: {MODEL_PATH}")
 predictions = model.transform(data)
 predictions=predictions.select("player_id","comment","prediction")
 
+
+predictions = predictions.withColumnRenamed("player_id", "spid") \
+                         .withColumnRenamed("comment", "review") \
+                         .withColumn("spid", col("spid").cast(IntegerType())) \
+                         .withColumn("review", col("review").cast(StringType())) \
+                         .withColumn("prediction", col("prediction").cast(IntegerType()))
+
+# ✅ 컬럼 순서 맞추기 (prediction이 맨 앞)
+predictions = predictions.select("spid", "review", "prediction")
+
+
 # Parquet 형식으로 저장
 predictions.write.mode("overwrite").parquet(f's3a://de5-finalproj-team2/analytics/review_data_ML/{processing_date}')
 
 print("예측 결과 저장 완료!")
-
