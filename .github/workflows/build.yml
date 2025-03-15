@@ -1,0 +1,22 @@
+name: Deploy to Spark Server
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH로 Spark EC2에 접속해 git pull 수행
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SPARK_EC2_HOST }}
+          username: ${{ secrets.SPARK_EC2_USERNAME }}
+          key: ${{ secrets.EC2_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/spark_scripts # 스파크 서버 내 깃 경로
+            git pull origin $(git rev-parse --abbrev-ref HEAD) # 현재 브랜치 내에서 pull
