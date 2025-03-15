@@ -13,7 +13,6 @@ import sys
 from pyspark.sql.functions import explode, col
 from pyspark.sql.types import IntegerType,DateType
 
-
 # 날짜 파라미터 받기
 
 if len(sys.argv) != 2:
@@ -22,10 +21,6 @@ if len(sys.argv) != 2:
 
 processing_date = sys.argv[1]
 print(f"Processing date: {processing_date}")
-
-
-
-
 
 # Spark 환경 설정
 conf = SparkConf()
@@ -41,6 +36,7 @@ spark = SparkSession.builder.master("local[1]").appName('sparkml_result').config
 #리뷰 데이터 s3로부터 가져옴
 data_path = f"s3a://de5-finalproj-team2/raw_data/csv/review_data/{processing_date}/review_data.csv"
 print(f"Reading csv file from: {data_path }")
+
 
 data = spark.read.csv(f"{data_path}",header=True, sep=",", multiLine=True, quote='"', escape="\\", inferSchema=True)
 
@@ -89,7 +85,7 @@ print(f"s3에서 모델 로드 완료: {MODEL_PATH}")
 predictions = model.transform(data)
 predictions=predictions.select("player_id","comment","prediction")
 
-# 컬럼명 변경 및 타입 변환
+
 predictions = predictions.withColumnRenamed("player_id", "spid") \
                          .withColumnRenamed("comment", "review") \
                          .withColumn("spid", col("spid").cast(IntegerType())) \
@@ -98,6 +94,7 @@ predictions = predictions.withColumnRenamed("player_id", "spid") \
 
 # ✅ 컬럼 순서 맞추기 (prediction이 맨 앞)
 predictions = predictions.select("spid", "review", "prediction")
+
 
 # Parquet 형식으로 저장
 predictions.write.mode("overwrite").parquet(f's3a://de5-finalproj-team2/analytics/review_data_ML/{processing_date}')
