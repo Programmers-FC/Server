@@ -89,6 +89,16 @@ print(f"s3에서 모델 로드 완료: {MODEL_PATH}")
 predictions = model.transform(data)
 predictions=predictions.select("player_id","comment","prediction")
 
+# 컬럼명 변경 및 타입 변환
+predictions = predictions.withColumnRenamed("player_id", "spid") \
+                         .withColumnRenamed("comment", "review") \
+                         .withColumn("spid", col("spid").cast(IntegerType())) \
+                         .withColumn("review", col("review").cast(StringType())) \
+                         .withColumn("prediction", col("prediction").cast(IntegerType()))
+
+# ✅ 컬럼 순서 맞추기 (prediction이 맨 앞)
+predictions = predictions.select("spid", "review", "prediction")
+
 # Parquet 형식으로 저장
 predictions.write.mode("overwrite").parquet(f's3a://de5-finalproj-team2/analytics/review_data_ML/{processing_date}')
 
